@@ -56,9 +56,9 @@ These files are commented, the main steps are:
 		- using distributions from Kann et al. 2006 and 2010,  or self-defined distributions on the parameters    
 		- Only suited to study a short period of time. Not to study efficiency at different times.   
 
-	- theoretical model, based on the standard synchrotron model of Granot & Sari 2002   
-	        - using parameter distributions of D. Turpin found when fitting real GRB light curves, or self-defined parameter distributins   
-        	- Can study the efficiency at different times with this model.   
+	- theoretical model, based on the standard synchrotron model of Granot & Sari 2002     
+		- using parameter distributions of D. Turpin found when fitting real GRB light curves, or self-defined parameter distributins   
+		- Can study the efficiency at different times with this model.   
  
 
 - The extinction law are randomly drawn: 2/3 SMC, 1/3 MW, 1/3 LMC for moderate Av.   
