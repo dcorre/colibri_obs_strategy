@@ -37,6 +37,7 @@ You can run either the jupyter notebook or python script named Estimation_photoZ
 These files are commented, the main steps are:
 
 1) **General stuff**
+
 - Define a name for creating a new folder for your results. It will be created in pyGRBz/pyGRBz/results/   
 - Define the kind of GRB simulation: 'empirical' or 'theoretical' as well as the number of GRBs    
 - Create the transmissions curves, and store them in pyGRBz/pyGRBz/transmissions/colibri/   
@@ -50,8 +51,8 @@ These files are commented, the main steps are:
 
 3) **Simulate GRB light curves**
 
-- 2 possibilities:   
-        - empirical model, simple power law both in frequencies and time     
+- 2 possibilities:    
+	- empirical model, simple power law both in frequencies and time     
 		- using distributions from Kann et al. 2006 and 2010,  or self-defined distributions on the parameters    
 		- Only suited to study a short period of time. Not to study efficiency at different times.   
 
@@ -64,7 +65,6 @@ These files are commented, the main steps are:
 - For dusty GRBs (Av>1mag), equirepartition between the 3 laws. Dusty GRBs are considered to be located at z <~4   
 
 4) **Convolve these light curves with telescope response using pyETC**
-------------------------------------------------------------------
 
 - SNR considered for a detection: 3   
 - Calibration uncertainty used: 0.04 and 0.06 mag for DDRAGO and CAGIRE respectively.   
@@ -72,7 +72,6 @@ These files are commented, the main steps are:
 
 
 5) **Run photoz MCMC**
-------------------
 
 - 4 parameters to fit: z, Av, beta (spectral slope) and a scaling factor.    
 - The priors range are flat and can be user defined.   
@@ -82,7 +81,6 @@ These files are commented, the main steps are:
 
 
 6) **Outputs**
-----------
 
 - Plot the zphot vs zsim, and the relative uncertainty   
 - Write a short summary of the statistics in a txt file, results_summary.txt, in the results folder.   
