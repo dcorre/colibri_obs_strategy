@@ -1,7 +1,7 @@
 Requirements:
 -------------
 
-Install the following packages:
+Install or update the following packages:
 
 - https://github.com/dcorre/pyGRBaglow
 - https://github.com/dcorre/pyETC
