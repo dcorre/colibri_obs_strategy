@@ -388,7 +388,7 @@ new_table.write(output_dir+'best_fits_all_combined.dat',format='ascii')
 
 
 # Draw the 3 summary plots for the photoZ accuracy 
-photZ.plot_zsim_zphot(input_file='best_fits_all_combined',output_suffix='_1sig',sigma=1,input_dir='/results/%s/' % resdir,output_dir='/results/%s/' % resdir)
+photZ.plot_zsim_zphot(input_file='best_fits_all_combined',output_suffix='_1sig',sigma=1,input_dir='/results/%s/' % resdir,output_dir='/results/%s/' % resdir,plot=display_plot)
 
 
 # # Create file summarising statistics 
