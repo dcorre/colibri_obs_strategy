@@ -37,7 +37,6 @@ You can run either the jupyter notebook or python script named Estimation_photoZ
 These files are commented, the main steps are:
 
 1) **General stuff**
-
 - Define a name for creating a new folder for your results. It will be created in pyGRBz/pyGRBz/results/   
 - Define the kind of GRB simulation: 'empirical' or 'theoretical' as well as the number of GRBs    
 - Create the transmissions curves, and store them in pyGRBz/pyGRBz/transmissions/colibri/   
@@ -51,7 +50,7 @@ These files are commented, the main steps are:
 
 3) **Simulate GRB light curves**
 
-- 2 possibilities: 
+- 2 possibilities:   
         - empirical model, simple power law both in frequencies and time     
 		- using distributions from Kann et al. 2006 and 2010,  or self-defined distributions on the parameters    
 		- Only suited to study a short period of time. Not to study efficiency at different times.   
