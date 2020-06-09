@@ -890,7 +890,10 @@ m_bins' bins
            #print ('GRB params:')
            #print (self.grb_params[p])
            obs_table=self.strategy_obs.copy()
-           obs_table['Name']=self.grb_params['name'][p]
+           #obs_table['Name']=self.grb_params['name'][p]
+           for i in range(len(obs_table)):
+               obs_table['Name'][i] = self.grb_params['name'][p]
+
            n=len(obs_table)
            #print (n)
            #print (obs_table)
@@ -920,8 +923,6 @@ m_bins' bins
                etc_GFT.information['beta']=self.grb_params['beta'][p]
                    
            for j in range(n):
-
-               
                #Change of strategy if GRB detected 
                if GRB_detection_status == 'detected':
                    print ('GRB detected')
@@ -941,10 +942,11 @@ m_bins' bins
                        #print ('test')
                        #print (self.strategy_obs['Name','Obs_time','time_since_burst','band'])
                        obs_table[j+counter:]=self.strategy_obs.copy()
-                       obs_table['Name']=self.grb_params['name'][p]
+                       for i in range(len(obs_table[j+counter:])):
+                           obs_table['Name'][j+counter+i] = self.grb_params['name'][p]
+                       #obs_table['Name']=self.grb_params['name'][p]
                        GRB_detection_status='already detected'
                        #print (obs_table['Name','Obs_time','time_since_burst','band'])
-               
                nb_sample+=1
 
                etc_GFT.information['etc_type']='snr'
@@ -1359,9 +1361,8 @@ m_bins' bins
    def format_outputs(self,observations,resdir='/results',fname='_pZ_format',RA_J2000='0h54m50.6s',DEC_J2000='+14d05m04.5s',galactic_dust_corrected=1):
        """ formatting the observations to be used by photoz code """
        if not os.path.exists(resdir): os.makedirs(resdir)
-       observations.show_in_browser()
+
        for obs in observations.group_by('Name').groups:
-           print (obs)
            text="""#name:%s
 #type:lc
 #RA_J2000:%s
