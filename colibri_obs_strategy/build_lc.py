@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -1356,8 +1359,9 @@ m_bins' bins
    def format_outputs(self,observations,resdir='/results',fname='_pZ_format',RA_J2000='0h54m50.6s',DEC_J2000='+14d05m04.5s',galactic_dust_corrected=1):
        """ formatting the observations to be used by photoz code """
        if not os.path.exists(resdir): os.makedirs(resdir)
-
+       observations.show_in_browser()
        for obs in observations.group_by('Name').groups:
+           print (obs)
            text="""#name:%s
 #type:lc
 #RA_J2000:%s
