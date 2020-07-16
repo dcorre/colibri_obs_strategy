@@ -5,7 +5,7 @@
 
 # Aim: create a mock sample of GRBs and study the detection efficiency and reliability of photometric redshift estimation for 2 observational strategies.
 
-# In[ ]:
+# In[1]:
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +20,7 @@ from astropy.table import vstack, Table
 _, path_pyGRBz, _ = imp.find_module('pyGRBz')
 
 
-# In[ ]:
+# In[2]:
 
 
 # Some parameters
@@ -36,7 +36,7 @@ display_plot=False
 
 # # Update transmission curves
 
-# In[ ]:
+# In[3]:
 
 
 # Create latest transmission curves to the transmission folder of pyGRBz
@@ -68,7 +68,7 @@ for band in filters:
 
 # # Define observational strategy
 
-# In[ ]:
+# In[5]:
 
 
 # Load package
@@ -77,7 +77,7 @@ from colibri_obs_strategy.build_lc import obs_strategy
 obs_strat=obs_strategy(resdir=resdir,plot=display_plot)
 
 
-# In[ ]:
+# In[6]:
 
 
 #Choose filters for each channel.
@@ -93,7 +93,7 @@ obs_strat.set_filters(vis1=[['gri'],['g','r','i']],
 #                      nir=[['J'],['J']])
 
 
-# In[ ]:
+# In[7]:
 
 
 # Load strategy from file
@@ -112,7 +112,7 @@ obs_strat.set_strategy_obs(load_strategy=False,
 
 # ## Mock samples generation
 
-# In[ ]:
+# In[8]:
 
 
 # Create the astropy table containing the parameters for the desired number of samples
@@ -255,7 +255,7 @@ if add_dusty_GRBs:
 
 # # Create Light Curves only with ETC
 
-# In[ ]:
+# In[10]:
 
 
 # Use the pyETC package to calculate the SNR and magnitude for each band at each time
@@ -388,7 +388,7 @@ new_table.write(output_dir+'best_fits_all_combined.dat',format='ascii')
 
 
 # Draw the 3 summary plots for the photoZ accuracy 
-photZ.plot_zsim_zphot(input_file='best_fits_all_combined',output_suffix='_1sig',sigma=1,input_dir='/results/%s/' % resdir,output_dir='/results/%s/' % resdir,plot=display_plot)
+photZ.plot_zsim_zphot(input_file='best_fits_all_combined',output_suffix='_1sig',sigma=1,input_dir='/results/%s/' % resdir,output_dir='/results/%s/' % resdir)
 
 
 # # Create file summarising statistics 
@@ -441,6 +441,7 @@ data=ascii.read(output_dir+'best_fits_all_combined.dat')
 level=68
 nb_det=2
 
+mask0 = (data['nb_detection'] > nb_det)
 mask1 = (data['z_sim']<zlim[0]) & (data['nb_detection'] > nb_det)
 mask2 = (data['z_sim'] >=zlim[0]) & (data['z_sim'] <= zlim[1]) & (data['nb_detection'] > nb_det)
 mask3 = (data['z_sim'] > zlim[1]) & (data['nb_detection'] > nb_det)
@@ -458,7 +459,7 @@ if mask3.any() and nb_grb3 > 0:
     f.write ('at z > %.2f: %d/%d (%.2f%%) \n' % (zlim[1],len(data[mask3]),nb_grb3, 100*len(data[mask3])/nb_grb3))
 else:
     f.write ('at z > %.2f: %d/%d (%.2f%%) \n' % (zlim[1],0,nb_grb3, 0))
-total_det = len(data)
+total_det = len(data[mask0])
 f.write ('All z: %d/%d (%.2f%%)\n' % (total_det,nb_grb1+nb_grb2+nb_grb3,100*(total_det/(nb_grb1+nb_grb2+nb_grb3))))
 f.write ('\n')
 
@@ -497,10 +498,4 @@ if mask3.any():
     f.write ('(zphot-zsim)/(1+zsim) std: %.3f\n' % (relative_err_std))
     f.write ('\n')
 f.close()
-
-
-# In[ ]:
-
-
-
 
