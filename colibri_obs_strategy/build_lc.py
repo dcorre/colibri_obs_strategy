@@ -431,7 +431,7 @@ class obs_strategy():
 
                    #z
                    if load_distrib and 'z' in distrib.colnames:
-                       hist = np.histogram(distrib['z'], bins=20,normed=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
+                       hist = np.histogram(distrib['z'], bins=20, density=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
                        hist_dist = rv_histogram(hist)
                        z_samples=hist_dist.ppf(rand_list)
                    else:
@@ -440,7 +440,7 @@ class obs_strategy():
 
                    #Av
                    if load_distrib and 'Av' in distrib.colnames:
-                       hist = np.histogram(distrib['Av'], bins=20,normed=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
+                       hist = np.histogram(distrib['Av'], bins=20, density=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
                        hist_dist = rv_histogram(hist)
                        Av_samples=hist_dist.ppf(rand_list)
                    else:
@@ -455,7 +455,7 @@ class obs_strategy():
 
                    #Rc
                    if load_distrib and 'Rc' in distrib.colnames:
-                       hist = np.histogram(distrib['Rc'], bins=13,normed=True,range=(np.min(distrib['Rc']),np.max(distrib['Rc'])))
+                       hist = np.histogram(distrib['Rc'], bins=13,density=True,range=(np.min(distrib['Rc']),np.max(distrib['Rc'])))
                        hist_dist = rv_histogram(hist)
                        Rc=hist_dist.ppf(rand_list)
                    else:
@@ -463,7 +463,7 @@ class obs_strategy():
 
                    #beta
                    if load_distrib and 'beta' in distrib.colnames:
-                       hist = np.histogram(distrib['beta'], bins=13,normed=True,range=(np.min(distrib['beta']),np.max(distrib['beta'])))
+                       hist = np.histogram(distrib['beta'], bins=13,density=True,range=(np.min(distrib['beta']),np.max(distrib['beta'])))
                        hist_dist = rv_histogram(hist)
                        beta=hist_dist.ppf(rand_list)
                    else:
@@ -471,7 +471,7 @@ class obs_strategy():
 
                    #alpha
                    if load_distrib and 'alpha' in distrib.colnames:
-                       hist = np.histogram(distrib['alpha'], bins=13,normed=True,range=(np.min(distrib['alpha']),np.max(distrib['alpha'])))
+                       hist = np.histogram(distrib['alpha'], bins=13,density=True,range=(np.min(distrib['alpha']),np.max(distrib['alpha'])))
                        hist_dist = rv_histogram(hist)
                        alpha=hist_dist.ppf(rand_list)
                    else:
@@ -479,7 +479,7 @@ class obs_strategy():
 
                    #wvl0
                    if load_distrib and 'wvl0' in distrib.colnames:
-                       hist = np.histogram(distrib['wvl0'], bins=13,normed=True,range=(np.min(distrib['wvl0']),np.max(distrib['wvl0'])))
+                       hist = np.histogram(distrib['wvl0'], bins=13,density=True,range=(np.min(distrib['wvl0']),np.max(distrib['wvl0'])))
                        hist_dist = rv_histogram(hist)
                        wvl0=hist_dist.ppf(rand_list)
                    else:
@@ -487,7 +487,7 @@ class obs_strategy():
 
                    #t0
                    if load_distrib and 't0' in distrib.colnames:
-                       hist = np.histogram(distrib['t0'], bins=13,normed=True,range=(np.min(distrib['t0']),np.max(distrib['t0'])))
+                       hist = np.histogram(distrib['t0'], bins=13,density=True,range=(np.min(distrib['t0']),np.max(distrib['t0'])))
                        hist_dist = rv_histogram(hist)
                        t0=hist_dist.ppf(rand_list)
                    else:
@@ -562,7 +562,7 @@ class obs_strategy():
                    
                    #z
                    if load_distrib and 'z' in distrib.colnames:
-                       hist = np.histogram(distrib['z'], bins=20,normed=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
+                       hist = np.histogram(distrib['z'], bins=20,density=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
                        hist_dist = rv_histogram(hist)
                        z_samples=hist_dist.ppf(rand_list)
                    else:
@@ -570,7 +570,7 @@ class obs_strategy():
 
                    #z
                    if load_distrib and 'Av' in distrib.colnames:
-                       hist = np.histogram(distrib['Av'], bins=20,normed=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
+                       hist = np.histogram(distrib['Av'], bins=20,density=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
                        hist_dist = rv_histogram(hist)
                        Av_samples=hist_dist.ppf(rand_list)
                    else:
@@ -584,7 +584,7 @@ class obs_strategy():
 
                    #n0
                    if load_distrib == True and 'n0' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['n0']), bins=20,normed=True,range=(np.log10(np.min(distrib['n0'])),np.log10(np.max(distrib['n0']))))
+                       hist = np.histogram(np.log10(distrib['n0']), bins=20,density=True,range=(np.log10(np.min(distrib['n0'])),np.log10(np.max(distrib['n0']))))
                        hist_dist = rv_histogram(hist)
                        n0=hist_dist.ppf(rand_list)
                        #print (n0)
@@ -598,7 +598,7 @@ class obs_strategy():
                        #plt.figure()
                        #plt.hist(np.log10(distrib['eps_b']))
                        #plt.show()
-                       hist = np.histogram(np.log10(distrib['eps_b']), bins=20,normed=True,range=(np.log10(np.min(distrib['eps_b'])),np.log10(np.max(distrib['eps_b']))))
+                       hist = np.histogram(np.log10(distrib['eps_b']), bins=20,density=True,range=(np.log10(np.min(distrib['eps_b'])),np.log10(np.max(distrib['eps_b']))))
                        hist_dist = rv_histogram(hist)
                        eps_b=hist_dist.ppf(rand_list)
                        eps_b=10**eps_b
@@ -610,7 +610,7 @@ class obs_strategy():
 
                    #eps_e
                    if load_distrib and 'eps_e' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['eps_e']), bins=20,normed=True,range=(np.log10(np.min(distrib['eps_e'])),np.log10(np.max(distrib['eps_e']))))
+                       hist = np.histogram(np.log10(distrib['eps_e']), bins=20,density=True,range=(np.log10(np.min(distrib['eps_e'])),np.log10(np.max(distrib['eps_e']))))
                        hist_dist = rv_histogram(hist)
                        eps_e=hist_dist.ppf(rand_list)
                        eps_e=10**eps_e
@@ -619,7 +619,7 @@ class obs_strategy():
 
                    #p
                    if load_distrib and 'p' in distrib.colnames:
-                       hist = np.histogram(distrib['p'], bins=20,normed=True,range=(np.min(distrib['p']),np.max(distrib['p'])))
+                       hist = np.histogram(distrib['p'], bins=20,density=True,range=(np.min(distrib['p']),np.max(distrib['p'])))
                        hist_dist = rv_histogram(hist)
                        p=hist_dist.ppf(rand_list)
                    else:
@@ -627,7 +627,7 @@ class obs_strategy():
 
                    #eta
                    if load_distrib and 'eta' in distrib.colnames:
-                       hist = np.histogram(distrib['eta'], bins=20,normed=True,range=(np.min(distrib['eta']),np.max(distrib['eta'])))
+                       hist = np.histogram(distrib['eta'], bins=20,density=True,range=(np.min(distrib['eta']),np.max(distrib['eta'])))
                        hist_dist = rv_histogram(hist)
                        eta=hist_dist.ppf(rand_list)
                    else:
@@ -635,7 +635,7 @@ class obs_strategy():
           
                    #E_iso
                    if load_distrib and 'E_iso' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['E_iso']), bins=20,normed=True,range=(np.log10(np.min(distrib['E_iso'])),np.log10(np.max(distrib['E_iso']))))
+                       hist = np.histogram(np.log10(distrib['E_iso']), bins=20,density=True,range=(np.log10(np.min(distrib['E_iso'])),np.log10(np.max(distrib['E_iso']))))
                        hist_dist = rv_histogram(hist)
                        E_iso=10**hist_dist.ppf(rand_list)
                    else:
@@ -643,7 +643,7 @@ class obs_strategy():
 
                    #E_K
                    if load_distrib and 'E_K' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['E_K']), bins=20,normed=True,range=(np.log10(np.min(distrib['E_K'])),np.log10(np.max(distrib['E_K']))))
+                       hist = np.histogram(np.log10(distrib['E_K']), bins=20,density=True,range=(np.log10(np.min(distrib['E_K'])),np.log10(np.max(distrib['E_K']))))
                        hist_dist = rv_histogram(hist)
                        E_K=10**hist_dist.ppf(rand_list)
                    else:
@@ -653,7 +653,7 @@ class obs_strategy():
 
                    #Y
                    if load_distrib and 'Y' in distrib.colnames:
-                       hist = np.histogram(distrib['Y'], bins=20,normed=True,range=(np.min(distrib['Y']),np.max(distrib['Y'])))
+                       hist = np.histogram(distrib['Y'], bins=20,density=True,range=(np.min(distrib['Y']),np.max(distrib['Y'])))
                        hist_dist = rv_histogram(hist)
                        Y=hist_dist.ppf(rand_list)
                    else:
@@ -661,7 +661,7 @@ class obs_strategy():
 
                    #Mdot_loss
                    if load_distrib and 'Mdot_loss' in distrib.colnames:
-                       hist = np.histogram(distrib['Mdot_loss'], bins=20,normed=True,range=(np.min(distrib['Mdot_loss']),np.max(distrib['Mdot_loss'])))
+                       hist = np.histogram(distrib['Mdot_loss'], bins=20,density=True,range=(np.min(distrib['Mdot_loss']),np.max(distrib['Mdot_loss'])))
                        hist_dist = rv_histogram(hist)
                        Mdot_loss=hist_dist.ppf(rand_list)
                    else:
@@ -669,7 +669,7 @@ class obs_strategy():
  
                    #Vw
                    if load_distrib and 'Vw' in distrib.colnames:
-                       hist = np.histogram(distrib['Vw'], bins=20,normed=True,range=(np.min(distrib['Vw']),np.max(distrib['Vw'])))
+                       hist = np.histogram(distrib['Vw'], bins=20,density=True,range=(np.min(distrib['Vw']),np.max(distrib['Vw'])))
                        hist_dist = rv_histogram(hist)
                        Vw=hist_dist.ppf(rand_list)
                    else:
@@ -677,7 +677,7 @@ class obs_strategy():
 
                    #ism_type
                    if load_distrib and 'ism_type' in distrib.colnames:
-                       hist = np.histogram(distrib['ism_type'], bins=20,normed=True,range=(np.min(distrib['ism_type']),np.max(distrib['ism_type'])))
+                       hist = np.histogram(distrib['ism_type'], bins=20,density=True,range=(np.min(distrib['ism_type']),np.max(distrib['ism_type'])))
                        hist_dist = rv_histogram(hist)
                        ism_type=hist_dist.ppf(rand_list)
                    else:
@@ -822,7 +822,7 @@ m_bins' bins
        if log == True: 
            distrib=np.log10(distrib)
            label = '$log_{10}$ ' + label
-       n, bins, patches = plt.hist(distrib,bins=int(num_bins),normed=0, facecolor='c')#,alpha=0.5)
+       n, bins, patches = plt.hist(distrib,bins=int(num_bins),density=False, facecolor='c')#,alpha=0.5)
        plt.ylabel('N',size=18)
        if label == 'Av_host': newlabel = '$A_{V host}$'
        elif label == 'zsim': newlabel = '$z_{sim}$'
