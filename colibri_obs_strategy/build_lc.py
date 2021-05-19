@@ -451,7 +451,7 @@ class obs_strategy():
                    if load_distrib and 'ExtLaw' in distrib.colnames:
                        extlaws_samples=random.choices(distrib['ExtLaw'],k=num_samples)
                    else:
-                       extlaws_samples=random.choices(params['ExtLaw'],k=num_samples)
+                       extlaws_samples=self.gen_distribution(params['ExtLaw'])
 
                    #Rc
                    if load_distrib and 'Rc' in distrib.colnames:
@@ -527,6 +527,7 @@ class obs_strategy():
                    Av_samples = params['Av_host'] 
                    z_samples=params['z'] 
                    extlaws_samples=random.choices(params['ExtLaw'],k=num_samples)
+                   #extlaws_samples=params['ExtLaw']
                     
                    #Density of the environment
                    n0= params['n0']
@@ -580,7 +581,7 @@ class obs_strategy():
                    if load_distrib and 'ExtLaw' in distrib.colnames:
                        extlaws_samples=random.choices(distrib['ExtLaw'],k=num_samples)
                    else:
-                       extlaws_samples=random.choices(params['ExtLaw'],k=num_samples)
+                       extlaws_samples=self.gen_distribution(params['ExtLaw'])
 
                    #n0
                    if load_distrib == True and 'n0' in distrib.colnames:
@@ -767,8 +768,11 @@ class obs_strategy():
            
        num_samples = int(self.num_samples)
        distype = str(params[0])
-       mean = float(params[1])
-       if distype != 'constant':
+       if distype == "array" or distype == "random_choices":
+           mean = params[1]
+       else:
+           mean = float(params[1])
+       if distype != 'constant' and distype != "array" and distype != "random_choices":
            std = float(params[2])
            if distype=='truncnorm':
                a=float(params[3])
@@ -791,6 +795,10 @@ class obs_strategy():
            x = uniform.rvs(loc=mean,scale=std,size=num_samples)
        elif distype=='linspace':
            x =np.linspace(mean,std,num_samples)
+       elif distype=="array":
+           x = mean
+       elif distype=="random_choices":
+           x = random.choices(mean, k=num_samples)
        return x
 
 
