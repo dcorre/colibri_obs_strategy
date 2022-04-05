@@ -15,7 +15,216 @@ import os
 import subprocess as sp
 import random
 import imp
+from astropy.cosmology import Planck15 as cosmo
 
+def integration(wavelength_range, time_range, nb_subdiv_wvl, nb_subdiv_t, params_curve, z):
+    c = 2.9979e8 * 10**10 # A/s
+
+    lambda_min = wavelength_range[0]
+    lambda_max = wavelength_range[1]
+    t_min = time_range[0]
+    t_max = time_range[1]
+    
+    
+    params = [params_curve[0], params_curve[1]]
+    
+    wavelength = np.linspace(lambda_min, lambda_max, nb_subdiv_wvl) # A
+    freq = c/wavelength[::-1] # Hz
+    time = np.linspace(t_min, t_max, nb_subdiv_t)
+    
+    Rc = 15
+    F0 = 3080*10**(-0.4*Rc)
+    t0 = 86.4
+    wvl0 = 6400
+    
+    template = Templates(F0, t0, wvl0)
+    
+    light_curve = template.light_curve(wavelength, time, params)
+    z0 = 1.0
+    al = params[0]
+    be = params[1]
+    lc = light_curve*(1+z)/(1+z0)*(cosmo.luminosity_distance(z0).value/cosmo.luminosity_distance(z).value)**2*((1+z0)/(1+z))**(-al)*((1+z)/(1+z0))**(-be)
+    
+    #==============================================================================
+    # Transmission curve
+    #==============================================================================
+    
+    length = np.size(wavelength)
+    transm = np.ones((1,length))[0]
+    
+    k_min = lambda_min + (lambda_max - lambda_min)/3
+    k_max = lambda_min + (lambda_max - lambda_min)*2/3
+    
+    k = np.where(wavelength < k_min)
+    transm[k] = 0
+    k = np.where(wavelength > k_max)
+    transm[k] = 0
+    
+    #==============================================================================
+    # Convolution
+    #==============================================================================
+    
+    convol = []
+    convol_rev = []
+    for i in range(len(lc)):
+        convol.append(lc[i]*transm)
+        convol_rev.append(convol[i][::-1])
+    
+    #==============================================================================
+    # Integration
+    #==============================================================================
+    
+    A_trap_wvl = 0
+    for j in range(len(convol)):
+        for i in range(len(wavelength)-1):
+            a = wavelength[i]
+            b = wavelength[i+1]
+            step = b-a
+            A_trap_wvl = A_trap_wvl + step/2 * (convol[j][i] + convol[j][i+1])
+    
+    A_trap_wvl = A_trap_wvl / (k_max-k_min) / len(convol)
+    #print("Trapezes, wavelength: ", A_trap_wvl)
+    
+    return A_trap_wvl
+
+class Templates(object):
+    """ Power law, broken power law..."""
+
+    def __init__(self, F0=500, t0=300, wvl0=6400):
+        """
+        Parameters
+        ----------
+        F0 : `float`, optional, default: 500
+            flux normalisation in Jy
+
+        t0: `float`, optional, default: 300
+            time corresponding to the normalisation, in s
+
+        wvl0: `float`, optional, default: 6400
+            wavelength corresponding to the normalisation, in angstrom
+
+        Returns
+        -------
+        table : `EventTable`
+
+        """
+        self.F0 = F0
+        self.t0 = t0
+        self.wvl0 = wvl0
+
+        return None
+
+    def SPL(self, wvl, t, alpha, beta):
+        """ Simple Power Law.
+
+        Parameters
+        ----------
+        wvl : `array` or `float`
+            wavelength at which to compute the flux
+            Must be same unit as wwl0
+
+        t: `array` or `float`
+            time at which to compute the flux
+            Same unit as t0
+
+        alpha: `float`
+            temporal index
+
+        beta: `float`
+            spectral index
+
+        Returns
+        -------
+        flux: `array` or `float`
+
+        """
+
+        flux = self.F0 * (t / self.t0)**(-alpha) * (wvl / self.wvl0)**(beta)
+        return flux
+
+    def BPL(self, wvl, t, alpha1, alpha2, beta, s):
+        """ Broken Power Law.
+
+        Parameters
+        ----------
+        wvl : `array` or `float`
+            wavelength at which to compute the flux
+            Must be same unit as wwl0
+
+        t: `array` or `float`
+            time at which to compute the flux
+            Same unit as t0
+
+        alpha1: `float`
+            temporal index of first power law
+
+        alpha2: `float`
+            temporal index of second power law
+
+        beta: `float`
+            spectral index
+
+        s: `float`
+            smoothing parameter connecting the two powerlaws
+
+        Returns
+        -------
+        flux: `array` or `float`
+
+        """
+        F = self.F0 * (wvl / self.wvl0)**(beta) \
+            * ((t / self.t0)**(-s * alpha1)
+               + (t / self.t0)**(-s * alpha2))**(-1/s)
+        return F
+
+    def light_curve(self, wavelength, time, params, model='SPL'):
+        """ Compute light curves
+
+        Parameters
+        ----------
+        wavelength : `array` or `float`
+            wavelength at which to compute the flux
+            Must be same unit as wwl0
+
+        time: `array` or `float`
+            time at which to compute the flux
+            Same unit as t0
+
+        params: `list`
+            contains list of params for te given model (SPL/BPL)
+
+        model: `str`, optional, default: SPL
+            model to select between SPL and BPL
+
+        Returns
+        -------
+        flux: `array` or `float`
+            if wvl and t are float it returns a float
+            otherwise it is a 2D array containing the flux at each given
+            wavelength and time
+
+        """
+        time = np.atleast_1d(time)
+        wavelength = np.atleast_1d(wavelength)
+        lc = []
+        t1 = len(time)
+        wvl1 = len(wavelength)
+        for t in range(t1):
+            sed = []
+            for wvl in range(wvl1):
+                if model == 'SPL':
+                    alpha, beta = params
+                    SED = self.SPL(wavelength[wvl], time[t], alpha, beta)
+
+                elif model == 'BPL':
+                    alpha1, alpha2, beta, s = params
+                    SED = self.BPL(wavelength[wvl], time[t],
+                                   alpha1, alpha2, beta, s)
+                # Flux in obs frame in same unit as F0
+                sed.append(SED)
+            # Flux in obs frame in same unit as F0
+            lc.append(sed)
+        return np.array(lc)
 
 class obs_strategy():
    """
@@ -297,7 +506,7 @@ class obs_strategy():
 
        return strategy_obs
 
-   def set_grb_params(self,params=None,random_flag=False,load_params=False,params_file='grb_params_emp.tex',load_min=1,load_max=10,load_distrib=True,distrib_file='Turpin_GS02.txt',num_samples=1,model='gs02',plot_distribution=False,seed=1234567890,name_prefix_start=0):
+   def set_grb_params(self,params=None,random_flag=False,load_params=False,params_file='grb_params_emp.tex',load_min=1,load_max=10,load_distrib=True,distrib_file='Turpin_GS02.txt',num_samples=1,model='gs02',plot_distribution=False,t_since_burst=60,t_start=0,t_end=30,seed=1234567890,name_prefix_start=0):
        """ set the parameters caracterising the grb afterglow
 
        Parameters
@@ -351,6 +560,8 @@ class obs_strategy():
        """
        #params: either list or ['type',mean,std,a,b] a and b being the limits of allowed range
 
+       from astropy.cosmology import Planck15 as cosmo
+
        # GRB parameters
        #----------------
        self.model=model
@@ -380,6 +591,18 @@ class obs_strategy():
                wvl0=params['wvl0']
                t0=params['t0']
                F0_z=params['F0']
+               
+               t_exp = Table([[30]*len(z_samples)], names=['t_exp'])['t_exp']
+                
+               wavelength_range = [11.2779756464, 13.7841924567] # Wavelengths corresponding to a short interval around 1 keV
+               time_range = [t_since_burst+t_start, t_since_burst+t_end] # Time range for integration
+               nb_subdiv_wvl = 10000
+               nb_subdiv_t = 10
+               params = [1, 0.66]
+               F0_1keV_z = []
+               for z in z_samples:
+                   F0_1keV_z.append(integration(wavelength_range, time_range, nb_subdiv_wvl, nb_subdiv_t, params, z)) 
+               F0_1keV_z = Table([F0_1keV_z], names=['F0_1keV_z'])['F0_1keV_z']
 
            elif model=='gs02':
                n0=params['n0']
@@ -392,6 +615,18 @@ class obs_strategy():
                Mdot_loss=params['Mdot_loss']
                Vw=params['Vw']
                eta=params['eta']
+               
+               t_exp = Table([[30]*len(z_samples)], names=['t_exp'])['t_exp']
+ 
+               wavelength_range = [11.2779756464, 13.7841924567]
+               time_range = [t_since_burst+t_start, t_since_burst+t_end]
+               nb_subdiv_wvl = 10000
+               nb_subdiv_t = 10
+               params = [1, 0.66]
+               F0_1keV_z = []
+               for z in z_samples:
+                   F0_1keV_z.append(integration(wavelength_range, time_range, nb_subdiv_wvl, nb_subdiv_t, params, z)) 
+               F0_1keV_z = Table([F0_1keV_z], names=['F0_1keV_z'])['F0_1keV_z']
 
        elif load_params==False:
             
@@ -420,7 +655,20 @@ class obs_strategy():
     
                    # spectral index
                    beta=params['beta']
- 
+                   
+                   # exposure time
+                   t_exp = Table([[30]*len(z_samples)], names=['t_exp'])['t_exp']
+                   
+                   # flux at 1keV in function of z
+                   wavelength_range = [11.2779756464, 13.7841924567]
+                   time_range = [t_since_burst+t_start, t_since_burst+t_end]
+                   nb_subdiv_wvl = 10000
+                   nb_subdiv_t = 10
+                   params_1keV = [1, 0.66]
+                   F0_1keV_z = []
+                   for z in z_samples:
+                       F0_1keV_z.append(integration(wavelength_range, time_range, nb_subdiv_wvl, nb_subdiv_t, params_1keV, z))
+                   F0_1keV_z = Table([F0_1keV_z], names=['F0_1keV_z'])['F0_1keV_z']
 
                elif random_flag == True:
                    if self.seed!=-1: np.random.seed(self.seed)
@@ -431,7 +679,7 @@ class obs_strategy():
 
                    #z
                    if load_distrib and 'z' in distrib.colnames:
-                       hist = np.histogram(distrib['z'], bins=20, density=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
+                       hist = np.histogram(distrib['z'], bins=20,normed=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
                        hist_dist = rv_histogram(hist)
                        z_samples=hist_dist.ppf(rand_list)
                    else:
@@ -440,7 +688,7 @@ class obs_strategy():
 
                    #Av
                    if load_distrib and 'Av' in distrib.colnames:
-                       hist = np.histogram(distrib['Av'], bins=20, density=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
+                       hist = np.histogram(distrib['Av'], bins=20,normed=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
                        hist_dist = rv_histogram(hist)
                        Av_samples=hist_dist.ppf(rand_list)
                    else:
@@ -451,11 +699,11 @@ class obs_strategy():
                    if load_distrib and 'ExtLaw' in distrib.colnames:
                        extlaws_samples=random.choices(distrib['ExtLaw'],k=num_samples)
                    else:
-                       extlaws_samples=self.gen_distribution(params['ExtLaw'])
+                       extlaws_samples=random.choices(params['ExtLaw'],k=num_samples)
 
                    #Rc
                    if load_distrib and 'Rc' in distrib.colnames:
-                       hist = np.histogram(distrib['Rc'], bins=13,density=True,range=(np.min(distrib['Rc']),np.max(distrib['Rc'])))
+                       hist = np.histogram(distrib['Rc'], bins=13,normed=True,range=(np.min(distrib['Rc']),np.max(distrib['Rc'])))
                        hist_dist = rv_histogram(hist)
                        Rc=hist_dist.ppf(rand_list)
                    else:
@@ -463,7 +711,7 @@ class obs_strategy():
 
                    #beta
                    if load_distrib and 'beta' in distrib.colnames:
-                       hist = np.histogram(distrib['beta'], bins=13,density=True,range=(np.min(distrib['beta']),np.max(distrib['beta'])))
+                       hist = np.histogram(distrib['beta'], bins=13,normed=True,range=(np.min(distrib['beta']),np.max(distrib['beta'])))
                        hist_dist = rv_histogram(hist)
                        beta=hist_dist.ppf(rand_list)
                    else:
@@ -471,7 +719,7 @@ class obs_strategy():
 
                    #alpha
                    if load_distrib and 'alpha' in distrib.colnames:
-                       hist = np.histogram(distrib['alpha'], bins=13,density=True,range=(np.min(distrib['alpha']),np.max(distrib['alpha'])))
+                       hist = np.histogram(distrib['alpha'], bins=13,normed=True,range=(np.min(distrib['alpha']),np.max(distrib['alpha'])))
                        hist_dist = rv_histogram(hist)
                        alpha=hist_dist.ppf(rand_list)
                    else:
@@ -479,7 +727,7 @@ class obs_strategy():
 
                    #wvl0
                    if load_distrib and 'wvl0' in distrib.colnames:
-                       hist = np.histogram(distrib['wvl0'], bins=13,density=True,range=(np.min(distrib['wvl0']),np.max(distrib['wvl0'])))
+                       hist = np.histogram(distrib['wvl0'], bins=13,normed=True,range=(np.min(distrib['wvl0']),np.max(distrib['wvl0'])))
                        hist_dist = rv_histogram(hist)
                        wvl0=hist_dist.ppf(rand_list)
                    else:
@@ -487,12 +735,28 @@ class obs_strategy():
 
                    #t0
                    if load_distrib and 't0' in distrib.colnames:
-                       hist = np.histogram(distrib['t0'], bins=13,density=True,range=(np.min(distrib['t0']),np.max(distrib['t0'])))
+                       hist = np.histogram(distrib['t0'], bins=13,normed=True,range=(np.min(distrib['t0']),np.max(distrib['t0'])))
                        hist_dist = rv_histogram(hist)
                        t0=hist_dist.ppf(rand_list)
                    else:
                        t0=self.gen_distribution(params['t0'])
 
+                   # exposure time
+                   t_exp = Table([[30]*len(z_samples)], names=['t_exp'])['t_exp']
+                   
+                   # flux at 1keV in function of z
+                   wavelength_range = [11.2779756464, 13.7841924567]
+                   time_range = [t_since_burst+t_start, t_since_burst+t_end]
+                   nb_subdiv_wvl = 10000
+                   nb_subdiv_t = 10
+                   params_1keV = [1, 0.66]
+                   F0_1keV_z = []
+                   for z in z_samples:
+                       F0_1keV_z_tmp = integration(wavelength_range, time_range, nb_subdiv_wvl, nb_subdiv_t, params_1keV, z)
+                       F0_1keV_z.append(F0_1keV_z_tmp)
+                   F0_1keV_z = np.round(F0_1keV_z, 10)
+                   F0_1keV_z = Table([F0_1keV_z], names=['F0_1keV_z'])['F0_1keV_z']
+                   #print("Flux at given redshifts: ", F0_1keV_z)
                #wavelength of reference in angstroms
                #wvl0=6400
                #time of reference in seconds 
@@ -501,7 +765,7 @@ class obs_strategy():
 
                #correct for redshifting but not for extinction and IGM
                #it will be done later, here we want to calculate the Flux normalisation
-               from astropy.cosmology import Planck15 as cosmo
+               
                # Calculate the luminosity distance
                #cosmo = FlatLambdaCDM(H0=67.8, Om0=0.308)
                z0=1
@@ -517,6 +781,7 @@ class obs_strategy():
                alpha=np.array(["{0:.2f}".format(x) for x in alpha],dtype=float)
                beta=np.array(["{0:.2f}".format(x) for x in beta],dtype=float)
                F0_z=np.array(["{0:.2e}".format(x) for x in F0_z],dtype=float)
+               #print(F0_z)
                self.plot_distrib(F0_z,50,plot_distribution,'F0 (Jy)',log=True)
                self.plot_distrib(Rc,20,plot_distribution,'Rc mag')
                self.plot_distrib(alpha,20,plot_distribution,'alpha')
@@ -527,7 +792,6 @@ class obs_strategy():
                    Av_samples = params['Av_host'] 
                    z_samples=params['z'] 
                    extlaws_samples=random.choices(params['ExtLaw'],k=num_samples)
-                   #extlaws_samples=params['ExtLaw']
                     
                    #Density of the environment
                    n0= params['n0']
@@ -563,7 +827,7 @@ class obs_strategy():
                    
                    #z
                    if load_distrib and 'z' in distrib.colnames:
-                       hist = np.histogram(distrib['z'], bins=20,density=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
+                       hist = np.histogram(distrib['z'], bins=20,normed=True,range=(np.min(distrib['z']),np.max(distrib['z'])))
                        hist_dist = rv_histogram(hist)
                        z_samples=hist_dist.ppf(rand_list)
                    else:
@@ -571,7 +835,7 @@ class obs_strategy():
 
                    #z
                    if load_distrib and 'Av' in distrib.colnames:
-                       hist = np.histogram(distrib['Av'], bins=20,density=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
+                       hist = np.histogram(distrib['Av'], bins=20,normed=True,range=(np.min(distrib['Av']),np.max(distrib['Av'])))
                        hist_dist = rv_histogram(hist)
                        Av_samples=hist_dist.ppf(rand_list)
                    else:
@@ -581,11 +845,11 @@ class obs_strategy():
                    if load_distrib and 'ExtLaw' in distrib.colnames:
                        extlaws_samples=random.choices(distrib['ExtLaw'],k=num_samples)
                    else:
-                       extlaws_samples=self.gen_distribution(params['ExtLaw'])
+                       extlaws_samples=random.choices(params['ExtLaw'],k=num_samples)
 
                    #n0
                    if load_distrib == True and 'n0' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['n0']), bins=20,density=True,range=(np.log10(np.min(distrib['n0'])),np.log10(np.max(distrib['n0']))))
+                       hist = np.histogram(np.log10(distrib['n0']), bins=20,normed=True,range=(np.log10(np.min(distrib['n0'])),np.log10(np.max(distrib['n0']))))
                        hist_dist = rv_histogram(hist)
                        n0=hist_dist.ppf(rand_list)
                        #print (n0)
@@ -599,7 +863,7 @@ class obs_strategy():
                        #plt.figure()
                        #plt.hist(np.log10(distrib['eps_b']))
                        #plt.show()
-                       hist = np.histogram(np.log10(distrib['eps_b']), bins=20,density=True,range=(np.log10(np.min(distrib['eps_b'])),np.log10(np.max(distrib['eps_b']))))
+                       hist = np.histogram(np.log10(distrib['eps_b']), bins=20,normed=True,range=(np.log10(np.min(distrib['eps_b'])),np.log10(np.max(distrib['eps_b']))))
                        hist_dist = rv_histogram(hist)
                        eps_b=hist_dist.ppf(rand_list)
                        eps_b=10**eps_b
@@ -611,7 +875,7 @@ class obs_strategy():
 
                    #eps_e
                    if load_distrib and 'eps_e' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['eps_e']), bins=20,density=True,range=(np.log10(np.min(distrib['eps_e'])),np.log10(np.max(distrib['eps_e']))))
+                       hist = np.histogram(np.log10(distrib['eps_e']), bins=20,normed=True,range=(np.log10(np.min(distrib['eps_e'])),np.log10(np.max(distrib['eps_e']))))
                        hist_dist = rv_histogram(hist)
                        eps_e=hist_dist.ppf(rand_list)
                        eps_e=10**eps_e
@@ -620,7 +884,7 @@ class obs_strategy():
 
                    #p
                    if load_distrib and 'p' in distrib.colnames:
-                       hist = np.histogram(distrib['p'], bins=20,density=True,range=(np.min(distrib['p']),np.max(distrib['p'])))
+                       hist = np.histogram(distrib['p'], bins=20,normed=True,range=(np.min(distrib['p']),np.max(distrib['p'])))
                        hist_dist = rv_histogram(hist)
                        p=hist_dist.ppf(rand_list)
                    else:
@@ -628,7 +892,7 @@ class obs_strategy():
 
                    #eta
                    if load_distrib and 'eta' in distrib.colnames:
-                       hist = np.histogram(distrib['eta'], bins=20,density=True,range=(np.min(distrib['eta']),np.max(distrib['eta'])))
+                       hist = np.histogram(distrib['eta'], bins=20,normed=True,range=(np.min(distrib['eta']),np.max(distrib['eta'])))
                        hist_dist = rv_histogram(hist)
                        eta=hist_dist.ppf(rand_list)
                    else:
@@ -636,7 +900,7 @@ class obs_strategy():
           
                    #E_iso
                    if load_distrib and 'E_iso' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['E_iso']), bins=20,density=True,range=(np.log10(np.min(distrib['E_iso'])),np.log10(np.max(distrib['E_iso']))))
+                       hist = np.histogram(np.log10(distrib['E_iso']), bins=20,normed=True,range=(np.log10(np.min(distrib['E_iso'])),np.log10(np.max(distrib['E_iso']))))
                        hist_dist = rv_histogram(hist)
                        E_iso=10**hist_dist.ppf(rand_list)
                    else:
@@ -644,7 +908,7 @@ class obs_strategy():
 
                    #E_K
                    if load_distrib and 'E_K' in distrib.colnames:
-                       hist = np.histogram(np.log10(distrib['E_K']), bins=20,density=True,range=(np.log10(np.min(distrib['E_K'])),np.log10(np.max(distrib['E_K']))))
+                       hist = np.histogram(np.log10(distrib['E_K']), bins=20,normed=True,range=(np.log10(np.min(distrib['E_K'])),np.log10(np.max(distrib['E_K']))))
                        hist_dist = rv_histogram(hist)
                        E_K=10**hist_dist.ppf(rand_list)
                    else:
@@ -654,7 +918,7 @@ class obs_strategy():
 
                    #Y
                    if load_distrib and 'Y' in distrib.colnames:
-                       hist = np.histogram(distrib['Y'], bins=20,density=True,range=(np.min(distrib['Y']),np.max(distrib['Y'])))
+                       hist = np.histogram(distrib['Y'], bins=20,normed=True,range=(np.min(distrib['Y']),np.max(distrib['Y'])))
                        hist_dist = rv_histogram(hist)
                        Y=hist_dist.ppf(rand_list)
                    else:
@@ -662,7 +926,7 @@ class obs_strategy():
 
                    #Mdot_loss
                    if load_distrib and 'Mdot_loss' in distrib.colnames:
-                       hist = np.histogram(distrib['Mdot_loss'], bins=20,density=True,range=(np.min(distrib['Mdot_loss']),np.max(distrib['Mdot_loss'])))
+                       hist = np.histogram(distrib['Mdot_loss'], bins=20,normed=True,range=(np.min(distrib['Mdot_loss']),np.max(distrib['Mdot_loss'])))
                        hist_dist = rv_histogram(hist)
                        Mdot_loss=hist_dist.ppf(rand_list)
                    else:
@@ -670,7 +934,7 @@ class obs_strategy():
  
                    #Vw
                    if load_distrib and 'Vw' in distrib.colnames:
-                       hist = np.histogram(distrib['Vw'], bins=20,density=True,range=(np.min(distrib['Vw']),np.max(distrib['Vw'])))
+                       hist = np.histogram(distrib['Vw'], bins=20,normed=True,range=(np.min(distrib['Vw']),np.max(distrib['Vw'])))
                        hist_dist = rv_histogram(hist)
                        Vw=hist_dist.ppf(rand_list)
                    else:
@@ -678,7 +942,7 @@ class obs_strategy():
 
                    #ism_type
                    if load_distrib and 'ism_type' in distrib.colnames:
-                       hist = np.histogram(distrib['ism_type'], bins=20,density=True,range=(np.min(distrib['ism_type']),np.max(distrib['ism_type'])))
+                       hist = np.histogram(distrib['ism_type'], bins=20,normed=True,range=(np.min(distrib['ism_type']),np.max(distrib['ism_type'])))
                        hist_dist = rv_histogram(hist)
                        ism_type=hist_dist.ppf(rand_list)
                    else:
@@ -709,7 +973,7 @@ class obs_strategy():
                i+=name_prefix_start#+1 # starts at 0
                name.append(grb_ref+str(i))
        if model=='kann':
-           grb_params=Table([name,z_samples,Av_samples,extlaws_samples,F0_z,wvl0,t0,alpha,beta,Rc],names=['name','z','Av_host','ExtLaw','F0','wvl0','t0','alpha','beta','Rc'])
+           grb_params=Table([name,z_samples,Av_samples,extlaws_samples,F0_z,wvl0,t0,alpha,beta,Rc,F0_1keV_z,t_exp],names=['name','z','Av_host','ExtLaw','F0','wvl0','t0','alpha','beta','Rc','F0_1keV','t_exp'])
            self.plot_distrib(Av_samples,20,plot_distribution,'Av_host')
            self.plot_distrib(z_samples,20,plot_distribution,'zsim')
            self.plot_distrib(F0_z,50,plot_distribution,'F0 (Jy)',log=True)
@@ -732,9 +996,10 @@ class obs_strategy():
            #E_iso=E_K
            #eta=0.5*np.ones(num_samples)
            grb_params=Table([name,z_samples,Av_samples,extlaws_samples,E_iso,eta,eps_b,eps_e,p,Y,ism_type,n0,Mdot_loss,Vw],names=['name','z','Av_host','ExtLaw','E_iso','eta','eps_b','eps_e','p','Y','ism_type','n0','Mdot_loss','Vw'])
-
+           
        #print (grb_params)
        self.grb_params=grb_params
+       #print(self.grb_params['F0'])
        ascii.write(self.grb_params,self.respath+'Params.tex',format='latex',overwrite=True)
        ascii.write(self.grb_params,self.respath+'Params.txt',overwrite=True)
        if load_params == False: ascii.write(self.grb_params,'test.tex',format='latex',overwrite=True)
@@ -768,11 +1033,11 @@ class obs_strategy():
            
        num_samples = int(self.num_samples)
        distype = str(params[0])
-       if distype == "array" or distype == "random_choices":
+       if distype == 'array' or distype == 'random_choices':
            mean = params[1]
        else:
            mean = float(params[1])
-       if distype != 'constant' and distype != "array" and distype != "random_choices":
+       if distype != 'constant' and distype != 'array' and distype != 'random_choices':
            std = float(params[2])
            if distype=='truncnorm':
                a=float(params[3])
@@ -795,9 +1060,9 @@ class obs_strategy():
            x = uniform.rvs(loc=mean,scale=std,size=num_samples)
        elif distype=='linspace':
            x =np.linspace(mean,std,num_samples)
-       elif distype=="array":
+       elif distype=='array':
            x = mean
-       elif distype=="random_choices":
+       elif distype=='random_choices':
            x = random.choices(mean, k=num_samples)
        return x
 
@@ -1376,19 +1641,90 @@ m_bins' bins
 #RA_J2000:%s
 #DEC_J2000:%s
 #MW_corrected:%s
-#time_unit:s 
+#time_unit:s
 #z:%s
 #Av_host:%s
-time_since_burst band mag mag_err zp phot_sys detection telescope
+time_since_burst band flux flux_err zp flux_unit detection telescope
 """ % (obs['Name'].data[0],str(RA_J2000),str(DEC_J2000),galactic_dust_corrected,self.grb_params['z'][self.grb_params['name'] == obs['Name'].data[0]].data[0],self.grb_params['Av_host'][self.grb_params['name'] == obs['Name'].data[0]].data[0])
 
            f = open('%s/%s%s.txt'  % (resdir,obs['Name'].data[0],fname), 'w')
            f.write(text)
            for line in obs:
+               # band, flux, flux_err, zp, flux_unit, detection, telescope
                f.write('%.2f %s %.4f %.4f %s %s %d %s\n' % (line['time_since_burst'],line['band'],line['mag'],line['mag_err'],'-',line['phot_sys'],line['detection'],line['telescope']))
            f.close()
   
        return None
+       
+   def integration(wavelength_range, time_range, nb_subdiv_wvl, nb_subdiv_t, params_curve, z):
+        c = 2.9979e8 * 10**10 # A/s
+        
+        lambda_min = wavelength_range[0]
+        lambda_max = wavelength_range[1]
+        t_min = time_range[0]
+        t_max = time_range[1]
+        
+        
+        params = [params_curve[0], params_curve[1]]
+        
+        wavelength = np.linspace(lambda_min, lambda_max, nb_subdiv_wvl) # A
+        freq = c/wavelength[::-1] # Hz
+        time = np.linspace(t_min, t_max, nb_subdiv_t)
+        
+        Rc = 15
+        F0 = 3080*10**(-0.4*Rc)
+        t0 = 86.4
+        wvl0 = 6400
+        
+        template = Templates(F0, t0, wvl0)
+        
+        light_curve = template.light_curve(wavelength, time, params)
+        z0 = 1.0
+        al = params[0]
+        be = params[1]
+        lc = light_curve*(1+z)/(1+z0)*(cosmo.luminosity_distance(z0).value/cosmo.luminosity_distance(z).value)**2*((1+z0)/(1+z))**(-al)*((1+z)/(1+z0))**(-be)
+    
+        #==============================================================================
+        # Transmission curve
+        #==============================================================================
+        
+        length = np.size(wavelength)
+        transm = np.ones((1,length))[0]
+        
+        k_min = lambda_min + (lambda_max - lambda_min)/3
+        k_max = lambda_min + (lambda_max - lambda_min)*2/3
+        
+        k = np.where(wavelength < k_min)
+        transm[k] = 0
+        k = np.where(wavelength > k_max)
+        transm[k] = 0
+        
+        #==============================================================================
+        # Convolution
+        #==============================================================================
+        
+        convol = []
+        convol_rev = []
+        for i in range(len(lc)):
+            convol.append(lc[i]*transm)
+            convol_rev.append(convol[i][::-1])
+    
+        #==============================================================================
+        # Integration
+        #==============================================================================
+        
+        A_trap_wvl = 0
+        for j in range(len(convol)):
+            for i in range(len(wavelength)-1):
+                a = wavelength[i]
+                b = wavelength[i+1]
+                step = b-a
+                A_trap_wvl = A_trap_wvl + step/2 * (convol[j][i] + convol[j][i+1])
+        
+        A_trap_wvl = A_trap_wvl / (k_max-k_min) / len(convol)
+        print("Trapezes, wavelength: ", A_trap_wvl)
+        
+        return A_trap_wvl
 
 if __name__ == '__main__':
    
