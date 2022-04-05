@@ -990,8 +990,8 @@ m_bins' bins
                if SNR >= SNR4detection:
                    err_mag = np.sqrt((float(2.5*np.log10(1.+1./SNR)))**2 + (err_sys)**2)
                    #Draw the magitude from a gaussian distribution
-                   mag=np.random.normal(mag, err_mag, 1)
-                   #mag=mag
+                   #mag=np.random.normal(mag, err_mag, 1)
+                   mag=mag
                    detection=1
                    if GRB_detection_status=='not': GRB_detection_status='detected'
                    #print (float(2.5*np.log10(1.+1./SNR)),gft_dict['err_min'][band],err_mag)
