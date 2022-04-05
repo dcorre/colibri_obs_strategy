@@ -1379,7 +1379,7 @@ m_bins' bins
 #time_unit:s 
 #z:%s
 #Av_host:%s
-time_since_burst band mag mag_err zp phot_sys detection telescope
+time_since_burst band flux flux_err zp flux_unit detection telescope
 """ % (obs['Name'].data[0],str(RA_J2000),str(DEC_J2000),galactic_dust_corrected,self.grb_params['z'][self.grb_params['name'] == obs['Name'].data[0]].data[0],self.grb_params['Av_host'][self.grb_params['name'] == obs['Name'].data[0]].data[0])
 
            f = open('%s/%s%s.txt'  % (resdir,obs['Name'].data[0],fname), 'w')
